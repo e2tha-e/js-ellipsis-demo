@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const loremIpsum = require('lorem-ipsum');
+const path = require('path');
 
 function prefix(file) {
     const html = `<!DOCTYPE html>
@@ -23,7 +24,7 @@ function prefix(file) {
 function hundredParagraphs(file) {
     let html = '';
     for (let i = 0; i < 100; i++) {
-        html += '<div class="wrap"><p>';
+        html += '<div class="ellipsis-clamp"><p class="ellipsis-overflow">';
         html += loremIpsum({
             count: 1,
             units: 'sentences'
@@ -36,7 +37,7 @@ function hundredParagraphs(file) {
 function suffix(file) {
     const html = `
 </main>
-<script src="script.js"></script>
+<script src="${path.basename(file, '.html')}.js"></script>
 </body>
 </html>
 `;
@@ -50,5 +51,5 @@ function process(file) {
 }
 
 process('justified.html');
-process('justified-plus.html');
+process('left-aligned.html');
 process('shaved.html');
