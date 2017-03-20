@@ -31,19 +31,6 @@ html += `
     fs.writeFileSync(file, html);
 }
 
-function hundredParagraphs(file) {
-    let html = '';
-    for (let i = 0; i < 100; i++) {
-        html += '<div class="ellipsis-clamp"><p class="ellipsis-overflow">';
-        html += loremIpsum({
-            count: 1,
-            units: 'sentences'
-        });
-        html += '</p></div>';
-    }
-    fs.appendFileSync(file, html);
-}
-
 function suffix(file) {
     const html = `
 </main>
@@ -54,12 +41,23 @@ function suffix(file) {
     fs.appendFileSync(file, html);
 }
 
-function process(file) {
+function process(file, hundredParagraphs_) {
     prefix(file);
-    hundredParagraphs(file);
+    fs.appendFileSync(file, hundredParagraphs_);
     suffix(file);
 }
 
-process('justified.html');
-process('left-aligned.html');
-process('shaved.html');
+let hundredParagraphs = '';
+
+for (let i = 0; i < 100; i++) {
+    hundredParagraphs += '<div class="ellipsis-clamp"><p class="ellipsis-overflow">';
+    hundredParagraphs += loremIpsum({
+        count: 1,
+        units: 'sentences'
+    });
+    hundredParagraphs += '</p></div>';
+}
+
+process('justified.html', hundredParagraphs);
+process('left-aligned.html', hundredParagraphs);
+process('shaved.html', hundredParagraphs);
