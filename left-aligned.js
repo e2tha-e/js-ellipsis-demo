@@ -75,18 +75,31 @@ for (var i = 0; i < ellipsisClamps.length; i++) {
         leftAlignFail = true;
     }
 
-    var charLimit = Math.round((clampWidthNum * 2 / clampFontSizeNum) * (clampHeightNum / clampLineHeightNum));
+    var charLimit = Math.round((clampWidthNum * 2.1 / clampFontSizeNum) * (clampHeightNum / clampLineHeightNum));
 
     if (overflowHeightNum > clampHeightNum) {
         if (leftAlignFail) {
             ellipsisClamp.classList.add('ellipsis-on');
+
+        } else if (!ellipsisOverflow.innerHTML) { // Can't process without text.
+            continue;
+
         } else {
             var innerHTML = ellipsisOverflow.innerHTML.slice(0, charLimit);
-            if (innerHTML.lastIndexOf(' ') > -1) {
-                innerHTML = innerHTML.slice(0, innerHTML.lastIndexOf(' '));
-            } else {
-                continue;
+
+            // If the sliced innerHTML isn't immediately followed by a space, we need to find the previous space and
+            // slice down to there.
+            if (ellipsisOverflow.innerHTML[charLimit] !== ' ') {
+                var prevSpaceIdx = innerHTML.lastIndexOf(' ');
+
+                // Can't process if the entire element is filled with a single word.
+                if (prevSpaceIdx === -1) {
+                    continue;
+                }
+
+                innerHTML = innerHTML.slice(0, prevSpaceIdx);
             }
+
             innerHTML = innerHTML + '\u2026';
             ellipsisOverflow.innerHTML = innerHTML;
 
