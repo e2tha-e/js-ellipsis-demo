@@ -5,15 +5,25 @@ const loremIpsum = require('lorem-ipsum');
 const path = require('path');
 
 function prefix(file) {
-    const html = `<!DOCTYPE html>
+    let html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <link href="style.css" rel="stylesheet">
 <script src="jquery.min.js"></script>
+`;
+
+    if (file === 'shaved.html') {
+html += `
+<script src="shave.min.js"></script>
+`;
+    }
+
+    html += `
 </head>
 <body>
 <header>
+<h1>${path.basename(file, '.html')}.js</h1>
 <h2></h2>
 </header>
 <main>

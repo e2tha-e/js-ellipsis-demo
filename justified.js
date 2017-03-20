@@ -27,4 +27,4 @@ for (let i = 0; i < ellipsisClamps.length; i++) {
 const end = Date.now();
 const elapsed = end - start;
 
-d.querySelector('h2').innerHTML = `It took ${elapsed} ms to clamp ${ellipsisClamps.length} paragraphs`;
+d.querySelector('h2').innerHTML = `took ${elapsed} ms to clamp ${ellipsisClamps.length} paragraphs`;

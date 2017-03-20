@@ -112,4 +112,4 @@ for (var i = 0; i < ellipsisClamps.length; i++) {
 var end = Date.now();
 var elapsed = end - start;
 
-d.querySelector('h2').innerHTML = `It took ${elapsed} ms to clamp ${ellipsisClamps.length} paragraphs`;
+d.querySelector('h2').innerHTML = `took ${elapsed} ms to clamp ${ellipsisClamps.length} paragraphs`;
