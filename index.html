@@ -2,10 +2,47 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<style>
+main, a, div {
+    border: 1px solid gray;
+}
+main {
+    display: table;
+}
+section {
+    display: table-row;
+}
+a, div {
+    display: table-cell;
+    padding: 5px;
+}
+</style>
 </head>
 <body>
 <h2>JavaScript Ellipsis Demo</h2>
-<a href="justified.html" target="_blank">Justifying truncation + ellipsis solution.</a> (Currently in use on www.hbonow.com.)<br>
-<a href="left-aligned.html" target="_blank">Left-aligning truncation + ellipsis solution.</a> (Proposed replacement.)<br>
+<h3>Ordered from fastest to slowest</h3>
+<main>
+<section>
+<a href="justified.html" target="_blank">Justifying truncation + ellipsis solution.</a><div>Currently in use on www.hbonow.com.</div>
+</section>
+<section>
+<a href="left-aligned.html" target="_blank">Left-aligning truncation + ellipsis solution.</a><div>Proposed replacement.</div>
+</section>
+<section>
+<a href="shave.html" target="_blank">Shave</a><div>Unpredictable results.</div>
+</section>
+<section>
+<a href="jquery.ellipsis.html" target="_blank">jQuery .ellipsis plugin.</a><div></div>
+</section>
+<section>
+<a href="jquery.truncate.html" target="_blank">jQuery .truncate plugin.</a><div>Truncates mid-word.</div>
+</section>
+<section>
+<a href="jquery.dotdotdot.html" target="_blank">jQuery .dotdotdot plugin</a><div></div>
+</section>
+<section>
+<a href="jquery.trunk8.html" target="_blank">jQuery .trunk8 plugin</a><div>Truncates mid-word.</div>
+</section>
+</main>
 </body>
 </html>

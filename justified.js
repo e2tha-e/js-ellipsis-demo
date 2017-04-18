@@ -1,30 +1,30 @@
-const start = Date.now();
-const d = document;
-const ellipsisClamps = d.querySelectorAll('.ellipsis-clamp');
+var start = Date.now();
+var d = document;
+var ellipsisClamps = d.querySelectorAll('.ellipsis-clamp');
 
 function lengthToNumber(length) {
-    const number = parseFloat(length.replace(/([\d\.]*)/, '$1'));
+    var number = parseFloat(length.replace(/([\d\.]*)/, '$1'));
     return number;
 }
 
-for (let i = 0; i < ellipsisClamps.length; i++) {
-    const ellipsisClamp = ellipsisClamps[i];
-    const ellipsisOverflow = ellipsisClamp.querySelector('.ellipsis-overflow');
+for (var i = 0; i < ellipsisClamps.length; i++) {
+    var ellipsisClamp = ellipsisClamps[i];
+    var ellipsisOverflow = ellipsisClamp.querySelector('.ellipsis-overflow');
 
-    const ellipsisClampStyles = window.getComputedStyle(ellipsisClamp);
-    const clampHeight = ellipsisClampStyles.getPropertyValue('height');
-    const clampHeightNum = lengthToNumber(clampHeight);
+    var ellipsisClampStyles = window.getComputedStyle(ellipsisClamp);
+    var clampHeight = ellipsisClampStyles.getPropertyValue('height');
+    var clampHeightNum = lengthToNumber(clampHeight);
 
-    const ellipsisOverflowStyles = window.getComputedStyle(ellipsisOverflow);
-    const overflowHeight = ellipsisOverflowStyles.getPropertyValue('height');
-    const overflowHeightNum = lengthToNumber(overflowHeight);
+    var ellipsisOverflowStyles = window.getComputedStyle(ellipsisOverflow);
+    var overflowHeight = ellipsisOverflowStyles.getPropertyValue('height');
+    var overflowHeightNum = lengthToNumber(overflowHeight);
 
     if (overflowHeightNum > clampHeightNum) {
         ellipsisClamp.classList.add('ellipsis-on');
     }
 }
 
-const end = Date.now();
-const elapsed = end - start;
+var end = Date.now();
+var elapsed = end - start;
 
 d.querySelector('h2').innerHTML = `took ${elapsed} ms to clamp ${ellipsisClamps.length} paragraphs`;

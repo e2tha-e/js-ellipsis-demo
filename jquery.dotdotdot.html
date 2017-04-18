@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="style.css" rel="stylesheet">
+<script src="node_modules/jquery/jquery.min.js"></script>
+
+<script>
+  /*
+   *    jQuery dotdotdot 1.6.16
+   *
+   *    Copyright (c) Fred Heusschen
+   *    www.frebsite.nl
+   *
+   *    Plugin website:
+   *    dotdotdot.frebsite.nl
+   *
+   *    Dual licensed under the MIT and GPL licenses.
+   *    http://en.wikipedia.org/wiki/MIT_License
+   *    http://en.wikipedia.org/wiki/GNU_General_Public_License
+   */
+  
+  (function($, undef) {
+    if ($.fn.dotdotdot) {
+      return;
+    }
+  
+    $.fn.dotdotdot = function(o) {
+      if (this.length == 0) {
+        $.fn.dotdotdot.debug('No element found for "' + this.selector + '".');
+        return this;
+      }
+      if (this.length > 1) {
+        return this.each(
+          function() {
+            $(this).dotdotdot(o);
+          }
+        );
+      }
+  
+  
+      var $dot = this;
+  
+      if ($dot.data('dotdotdot')) {
+        $dot.trigger('destroy.dot');
+      }
+  
+      $dot.data('dotdotdot-style', $dot.attr('style') || '');
+      $dot.css('word-wrap', 'break-word');
+      if ($dot.css('white-space') === 'nowrap') {
+        $dot.css('white-space', 'normal');
+      }
+  
+      $dot.bind_events = function() {
+        $dot.bind(
+          'update.dot',
+          function(e, c) {
+            e.preventDefault();
+            e.stopPropagation();
+  
+            opts.maxHeight = (typeof opts.height == 'number') ? opts.height : getTrueInnerHeight($dot);
+  
+            opts.maxHeight += opts.tolerance;
+  
+            if (typeof c != 'undefined') {
+              if (typeof c == 'string' || c instanceof HTMLElement) {
+                c = $('<div />').append(c).contents();
+              }
+              if (c instanceof $) {
+                orgContent = c;
+              }
+            }
+  
+            $inr = $dot.wrapInner('<div class="dotdotdot" />').children();
+            $inr.contents()
+              .detach()
+              .end()
+              .append(orgContent.clone(true))
+              .find('br')
+              .replaceWith('  <br />  ')
+              .end()
+              .css({
+                'height': 'auto',
+                'width': 'auto',
+                'border': 'none',
+                'padding': 0,
+                'margin': 0
+              });
+  
+            var after = false,
+              trunc = false;
+  
+            if (conf.afterElement) {
+              after = conf.afterElement.clone(true);
+              after.show();
+              conf.afterElement.detach();
+            }
+  
+            if (test($inr, opts)) {
+              if (opts.wrap == 'children') {
+                trunc = children($inr, opts, after);
+              } else {
+                trunc = ellipsis($inr, $dot, $inr, opts, after);
+              }
+            }
+            $inr.replaceWith($inr.contents());
+            $inr = null;
+  
+            if ($.isFunction(opts.callback)) {
+              opts.callback.call($dot[0], trunc, orgContent);
+            }
+  
+            conf.isTruncated = trunc;
+            return trunc;
+          }
+  
+        ).bind(
+          'isTruncated.dot',
+          function(e, fn) {
+            e.preventDefault();
+            e.stopPropagation();
+  
+            if (typeof fn == 'function') {
+              fn.call($dot[0], conf.isTruncated);
+            }
+            return conf.isTruncated;
+          }
+  
+        ).bind(
+          'originalContent.dot',
+          function(e, fn) {
+            e.preventDefault();
+            e.stopPropagation();
+  
+            if (typeof fn == 'function') {
+              fn.call($dot[0], orgContent);
+            }
+            return orgContent;
+          }
+  
+        ).bind(
+          'destroy.dot',
+          function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+  
+            $dot.unwatch()
+              .unbind_events()
+              .contents()
+              .detach()
+              .end()
+              .append(orgContent)
+              .attr('style', $dot.data('dotdotdot-style') || '')
+              .data('dotdotdot', false);
+          }
+        );
+        return $dot;
+      }; // /bind_events
+  
+      $dot.unbind_events = function() {
+        $dot.unbind('.dot');
+        return $dot;
+      }; // /unbind_events
+  
+      $dot.watch = function() {
+        $dot.unwatch();
+        if (opts.watch == 'window') {
+          var $window = $(window),
+            _wWidth = $window.width(),
+            _wHeight = $window.height();
+  
+          $window.bind(
+            'resize.dot' + conf.dotId,
+            function() {
+              if (_wWidth != $window.width() || _wHeight != $window.height() || !opts.windowResizeFix) {
+                _wWidth = $window.width();
+                _wHeight = $window.height();
+  
+                if (watchInt) {
+                  clearInterval(watchInt);
+                }
+                watchInt = setTimeout(
+                  function() {
+                    $dot.trigger('update.dot');
+                  }, 100
+                );
+              }
+            }
+          );
+        } else {
+          watchOrg = getSizes($dot);
+          watchInt = setInterval(
+            function() {
+              if ($dot.is(':visible')) {
+                var watchNew = getSizes($dot);
+                if (watchOrg.width != watchNew.width ||
+                  watchOrg.height != watchNew.height) {
+                  $dot.trigger('update.dot');
+                  watchOrg = watchNew;
+                }
+              }
+            }, 500
+          );
+        }
+        return $dot;
+      };
+      $dot.unwatch = function() {
+        $(window).unbind('resize.dot' + conf.dotId);
+        if (watchInt) {
+          clearInterval(watchInt);
+        }
+        return $dot;
+      };
+  
+      var orgContent = $dot.contents(),
+        opts = $.extend(true, {}, $.fn.dotdotdot.defaults, o),
+        conf = {},
+        watchOrg = {},
+        watchInt = null,
+        $inr = null;
+  
+  
+      if (!(opts.lastCharacter.remove instanceof Array)) {
+        opts.lastCharacter.remove = $.fn.dotdotdot.defaultArrays.lastCharacter.remove;
+      }
+      if (!(opts.lastCharacter.noEllipsis instanceof Array)) {
+        opts.lastCharacter.noEllipsis = $.fn.dotdotdot.defaultArrays.lastCharacter.noEllipsis;
+      }
+  
+  
+      conf.afterElement = getElement(opts.after, $dot);
+      conf.isTruncated = false;
+      conf.dotId = dotId++;
+  
+  
+      $dot.data('dotdotdot', true)
+        .bind_events()
+        .trigger('update.dot');
+  
+      if (opts.watch) {
+        $dot.watch();
+      }
+  
+      return $dot;
+    };
+  
+  
+    //  public
+    $.fn.dotdotdot.defaults = {
+      'ellipsis': '... ',
+      'wrap': 'word',
+      'fallbackToLetter': true,
+      'lastCharacter': {},
+      'tolerance': 0,
+      'callback': null,
+      'after': null,
+      'height': null,
+      'watch': false,
+      'windowResizeFix': true
+    };
+    $.fn.dotdotdot.defaultArrays = {
+      'lastCharacter': {
+        'remove': [' ', '\u3000', ',', ';', '.', '!', '?'],
+        'noEllipsis': []
+      }
+    };
+    $.fn.dotdotdot.debug = function(msg) {};
+  
+  
+    //  private
+    var dotId = 1;
+  
+    function children($elem, o, after) {
+      var $elements = $elem.children(),
+        isTruncated = false;
+  
+      $elem.empty();
+  
+      for (var a = 0, l = $elements.length; a < l; a++) {
+        var $e = $elements.eq(a);
+        $elem.append($e);
+        if (after) {
+          $elem.append(after);
+        }
+        if (test($elem, o)) {
+          $e.remove();
+          isTruncated = true;
+          break;
+        } else {
+          if (after) {
+            after.detach();
+          }
+        }
+      }
+      return isTruncated;
+    }
+  
+    function ellipsis($elem, $d, $i, o, after) {
+      var isTruncated = false;
+  
+      //    Don't put the ellipsis directly inside these elements
+      var notx = 'table, thead, tbody, tfoot, tr, col, colgroup, object, embed, param, ol, ul, dl, blockquote, select, optgroup, option, textarea, script, style';
+  
+      //    Don't remove these elements even if they are after the ellipsis
+      var noty = 'script, .dotdotdot-keep';
+  
+      $elem
+        .contents()
+        .detach()
+        .each(
+          function() {
+  
+            var e = this,
+              $e = $(e);
+  
+            if (typeof e == 'undefined' || (e.nodeType == 3 && $.trim(e.data).length == 0)) {
+              return true;
+            } else if ($e.is(noty)) {
+              $elem.append($e);
+            } else if (isTruncated) {
+              return true;
+            } else {
+              $elem.append($e);
+              if (after) {
+                $elem[$elem.is(notx) ? 'after' : 'append'](after);
+              }
+              if (test($i, o)) {
+                if (e.nodeType == 3) // node is TEXT
+                {
+                  isTruncated = ellipsisElement($e, $d, $i, o, after);
+                } else {
+                  isTruncated = ellipsis($e, $d, $i, o, after);
+                }
+  
+                if (!isTruncated) {
+                  $e.detach();
+                  isTruncated = true;
+                }
+              }
+  
+              if (!isTruncated) {
+                if (after) {
+                  after.detach();
+                }
+              }
+            }
+          }
+      );
+  
+      return isTruncated;
+    }
+  
+    function ellipsisElement($e, $d, $i, o, after) {
+      var e = $e[0];
+  
+      if (!e) {
+        return false;
+      }
+  
+      var txt = getTextContent(e),
+        space = (txt.indexOf(' ') !== -1) ? ' ' : '\u3000',
+        separator = (o.wrap == 'letter') ? '' : space,
+        textArr = txt.split(separator),
+        position = -1,
+        midPos = -1,
+        startPos = 0,
+        endPos = textArr.length - 1;
+  
+  
+      //    Only one word
+      if (o.fallbackToLetter && startPos == 0 && endPos == 0) {
+        separator = '';
+        textArr = txt.split(separator);
+        endPos = textArr.length - 1;
+      }
+  
+      while (startPos <= endPos && !(startPos == 0 && endPos == 0)) {
+        var m = Math.floor((startPos + endPos) / 2);
+        if (m == midPos) {
+          break;
+        }
+        midPos = m;
+  
+        setTextContent(e, textArr.slice(0, midPos + 1).join(separator) + o.ellipsis);
+  
+        if (!test($i, o)) {
+          position = midPos;
+          startPos = midPos;
+        } else {
+          endPos = midPos;
+  
+          //    Fallback to letter
+          if (o.fallbackToLetter && startPos == 0 && endPos == 0) {
+            separator = '';
+            textArr = textArr[0].split(separator);
+            position = -1;
+            midPos = -1;
+            startPos = 0;
+            endPos = textArr.length - 1;
+          }
+        }
+      }
+  
+      if (position != -1 && !(textArr.length == 1 && textArr[0].length == 0)) {
+        txt = addEllipsis(textArr.slice(0, position + 1).join(separator), o);
+        setTextContent(e, txt);
+      } else {
+        var $w = $e.parent();
+        $e.detach();
+  
+        var afterLength = (after && after.closest($w).length) ? after.length : 0;
+  
+        if ($w.contents().length > afterLength) {
+          e = findLastTextNode($w.contents().eq(-1 - afterLength), $d);
+        } else {
+          e = findLastTextNode($w, $d, true);
+          if (!afterLength) {
+            $w.detach();
+          }
+        }
+        if (e) {
+          txt = addEllipsis(getTextContent(e), o);
+          setTextContent(e, txt);
+          if (afterLength && after) {
+            $(e).parent().append(after);
+          }
+        }
+      }
+  
+      return true;
+    }
+  
+    function test($i, o) {
+      return $i.innerHeight() > o.maxHeight;
+    }
+  
+    function addEllipsis(txt, o) {
+      while ($.inArray(txt.slice(-1), o.lastCharacter.remove) > -1) {
+        txt = txt.slice(0, -1);
+      }
+      if ($.inArray(txt.slice(-1), o.lastCharacter.noEllipsis) < 0) {
+        txt += o.ellipsis;
+      }
+      return txt;
+    }
+  
+    function getSizes($d) {
+      return {
+        'width': $d.innerWidth(),
+        'height': $d.innerHeight()
+      };
+    }
+  
+    function setTextContent(e, content) {
+      if (e.innerText) {
+        e.innerText = content;
+      } else if (e.nodeValue) {
+        e.nodeValue = content;
+      } else if (e.textContent) {
+        e.textContent = content;
+      }
+  
+    }
+  
+    function getTextContent(e) {
+      if (e.innerText) {
+        return e.innerText;
+      } else if (e.nodeValue) {
+        return e.nodeValue;
+      } else if (e.textContent) {
+        return e.textContent;
+      } else {
+        return "";
+      }
+    }
+  
+    function getPrevNode(n) {
+      do {
+        n = n.previousSibling;
+      }
+      while (n && n.nodeType !== 1 && n.nodeType !== 3);
+  
+      return n;
+    }
+  
+    function findLastTextNode($el, $top, excludeCurrent) {
+      var e = $el && $el[0],
+        p;
+      if (e) {
+        if (!excludeCurrent) {
+          if (e.nodeType === 3) {
+            return e;
+          }
+          if ($.trim($el.text())) {
+            return findLastTextNode($el.contents().last(), $top);
+          }
+        }
+        p = getPrevNode(e);
+        while (!p) {
+          $el = $el.parent();
+          if ($el.is($top) || !$el.length) {
+            return false;
+          }
+          p = getPrevNode($el[0]);
+        }
+        if (p) {
+          return findLastTextNode($(p), $top);
+        }
+      }
+      return false;
+    }
+  
+    function getElement(e, $i) {
+      if (!e) {
+        return false;
+      }
+      if (typeof e === 'string') {
+        e = $(e, $i);
+        return (e.length) ? e : false;
+      }
+      return !e.jquery ? false : e;
+    }
+  
+    function getTrueInnerHeight($el) {
+      var h = $el.innerHeight(),
+        a = ['paddingTop', 'paddingBottom'];
+  
+      for (var z = 0, l = a.length; z < l; z++) {
+        var m = parseInt($el.css(a[z]), 10);
+        if (isNaN(m)) {
+          m = 0;
+        }
+        h -= m;
+      }
+      return h;
+    }
+  
+  
+    //  override jQuery.html
+    var _orgHtml = $.fn.html;
+    $.fn.html = function(str) {
+      if (str != undef && !$.isFunction(str) && this.data('dotdotdot')) {
+        return this.trigger('update', [str]);
+      }
+      return _orgHtml.apply(this, arguments);
+    };
+  
+  
+    //  override jQuery.text
+    var _orgText = $.fn.text;
+    $.fn.text = function(str) {
+      if (str != undef && !$.isFunction(str) && this.data('dotdotdot')) {
+        str = $('<div />').text(str).html();
+        return this.trigger('update', [str]);
+      }
+      return _orgText.apply(this, arguments);
+    };
+  
+  
+  })(jQuery);
+</script>
+
+</head>
+<body>
+<header>
+<h1><a href="http://dotdotdot.frebsite.nl/" target="_blank">jQuery.dotdotdot</a></h1>
+<h2></h2>
+</header>
+<main>
+<div class="ellipsis-clamp"><p class="ellipsis-overflow">Consectetur id enim dolor aute ipsum cupidatat.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Magna veniam ea non sint duis sunt ex velit.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Eu nostrud pariatur minim elit voluptate aliquip consequat commodo id officia cupidatat qui amet.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Id et proident qui ea excepteur voluptate dolore quis laborum elit eiusmod ipsum.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Esse excepteur dolor occaecat sit veniam duis in ipsum ut do anim anim quis.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Adipisicing irure anim fugiat est et in incididunt anim amet mollit cupidatat sunt.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Consectetur est ullamco ex duis anim culpa nulla dolore officia.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Pariatur incididunt fugiat velit et sunt id occaecat.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Amet fugiat fugiat velit mollit mollit dolor sint elit officia consectetur culpa cupidatat nulla ut.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Voluptate consectetur deserunt sunt ea ea fugiat labore amet irure irure irure.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Excepteur ipsum proident tempor veniam pariatur amet.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Nostrud anim velit sunt nulla consequat.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Est exercitation ipsum officia elit aute incididunt id ad.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Fugiat non deserunt cillum esse.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Culpa eu nulla labore incididunt officia eu nostrud ea velit.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Amet et culpa in aliqua pariatur laboris amet.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Elit tempor culpa enim nisi id in adipisicing laborum consequat.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Cillum veniam sint cillum tempor ullamco.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ipsum cupidatat est sit aliqua deserunt pariatur eiusmod ex sit est adipisicing esse ullamco.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Aute esse non et esse sit anim exercitation amet exercitation ea.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Eiusmod ex aliqua commodo irure enim amet eu exercitation non aute.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Lorem anim ex sit ad in commodo ullamco consectetur quis cupidatat qui ut sit nostrud.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Duis elit ullamco elit dolor ex ea officia.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Et ex cupidatat nostrud anim deserunt aute.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Excepteur cupidatat adipisicing nulla eiusmod minim.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Reprehenderit Lorem voluptate consectetur ut aliquip.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Veniam do id ut do.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Aliqua quis excepteur ut sit eu velit laboris.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Cupidatat officia commodo minim dolor tempor labore ut elit eu cupidatat nisi.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Culpa laboris in dolor Lorem fugiat ad velit tempor ea duis sit anim sint.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Lorem nulla sint labore duis occaecat eu exercitation quis commodo dolor.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Magna labore non aliquip non eu mollit culpa officia eu magna.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Eu aliqua sunt duis laboris voluptate ea ullamco tempor ullamco voluptate ut eiusmod.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Magna nostrud aliquip exercitation eiusmod anim reprehenderit do laboris reprehenderit ullamco laborum elit enim.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Mollit Lorem minim ullamco deserunt cillum elit mollit minim.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Consequat ullamco pariatur consequat esse eu ullamco.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Mollit ullamco ut ipsum est reprehenderit laborum eiusmod est nulla.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Commodo ullamco veniam esse deserunt fugiat est quis.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Dolor quis velit elit voluptate.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Cillum officia dolore sint laborum id laborum fugiat est labore cupidatat aliquip cillum.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Est laboris voluptate excepteur deserunt ullamco consectetur nisi ea commodo velit consectetur.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Est amet velit excepteur officia pariatur ullamco voluptate veniam officia eu consequat non veniam.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Adipisicing id quis proident reprehenderit Lorem tempor et.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Veniam amet officia veniam culpa non ad magna aute labore anim cupidatat.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Labore incididunt mollit velit ex ex cillum amet minim tempor Lorem ullamco.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Irure laborum aliqua minim incididunt.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Aliqua consequat elit velit amet.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Incididunt irure incididunt adipisicing laborum aliqua eiusmod do excepteur voluptate duis est amet amet.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">In ut nostrud esse veniam sunt tempor.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Sunt ea magna dolore elit.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Culpa magna eu ad laboris eu ullamco occaecat nulla excepteur irure laborum anim.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Voluptate mollit esse proident dolore enim esse cillum minim labore eiusmod laboris commodo velit labore.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ad ea est nulla esse.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Commodo culpa excepteur irure aliquip aute aute sint.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ex fugiat minim exercitation et.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Non qui irure est irure excepteur ipsum deserunt laborum ex.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Do quis consequat duis dolor laborum dolore amet ea laboris minim.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Quis tempor amet eu commodo cupidatat cupidatat ex ad reprehenderit sint.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Tempor minim culpa irure occaecat eu do deserunt quis do irure.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Aliqua anim do irure dolor proident culpa pariatur officia excepteur anim magna mollit.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Eiusmod ea ex qui pariatur.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Aliqua veniam sunt adipisicing est.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Velit dolore aliqua minim ullamco ullamco enim.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Tempor fugiat amet sit in ullamco.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Cillum est sunt adipisicing nostrud aliquip est quis amet sit.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Irure eiusmod magna sit reprehenderit dolor duis enim ea Lorem fugiat incididunt veniam ipsum qui.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Deserunt in dolore ut quis Lorem anim labore sit aliqua.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Veniam esse adipisicing elit nostrud commodo fugiat in.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Id excepteur nulla mollit laborum proident eiusmod eu anim eiusmod velit ipsum amet duis.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Est velit excepteur commodo tempor consequat pariatur ipsum aute aliquip in excepteur voluptate reprehenderit.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ea nostrud laboris et eiusmod.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Tempor consectetur amet Lorem et sunt.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Laborum laborum ut pariatur consequat do Lorem incididunt duis.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Amet exercitation non pariatur sint adipisicing Lorem.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Magna laborum ex aliquip Lorem esse nostrud adipisicing veniam deserunt sint ullamco nostrud irure esse.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Excepteur exercitation proident in veniam dolore anim reprehenderit velit laborum sit aliqua est dolor non.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Pariatur nostrud officia consectetur nostrud deserunt esse nulla sunt irure aute pariatur proident et laboris.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Officia dolore cupidatat dolore sit ullamco est aliquip nostrud quis sint qui duis.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Nulla reprehenderit incididunt cillum aliquip consectetur aute est tempor.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Laborum non deserunt in tempor aute magna laborum duis amet reprehenderit ipsum exercitation consectetur.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Officia ullamco adipisicing enim labore cupidatat esse labore pariatur reprehenderit cillum aute velit proident.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Culpa adipisicing magna nisi veniam nostrud incididunt.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Lorem tempor aute proident ut incididunt consequat laboris anim velit sunt mollit.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Id nisi in qui ea culpa fugiat.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Pariatur fugiat ullamco duis cupidatat sint cillum ea non incididunt elit minim ipsum aliqua ex.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Nisi culpa est dolore incididunt consequat esse.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Commodo duis magna amet labore aliqua ullamco.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ex dolor mollit deserunt tempor non laborum ullamco.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Excepteur ut ut nulla voluptate consectetur irure sint aliquip ullamco.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Anim velit laboris mollit laboris reprehenderit non eu ipsum excepteur enim.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ullamco fugiat dolore fugiat commodo aliquip sit.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ipsum nostrud mollit laboris veniam in et.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ipsum consequat officia consequat pariatur excepteur est irure adipisicing amet pariatur laboris sint esse.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ea minim elit fugiat eiusmod deserunt irure ad irure laboris.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Lorem nulla adipisicing ut excepteur laboris duis consectetur nisi nulla exercitation mollit irure ad ad.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Et velit id id qui aliqua id aute eu laboris reprehenderit est excepteur reprehenderit dolore.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ex pariatur nulla excepteur adipisicing commodo labore ad excepteur ut commodo.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Ad aliqua duis voluptate laborum laborum eu in ipsum velit voluptate.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Lorem eu ad magna ea nisi elit exercitation in adipisicing cillum non ipsum.</p></div><div class="ellipsis-clamp"><p class="ellipsis-overflow">Dolore quis eu nulla ut consectetur.</p></div>
+</main>
+<script>
+var $ = jQuery;
+var start = Date.now();
+$('.ellipsis-overflow').dotdotdot({
+    height: 40
+});
+var end = Date.now();
+var elapsed = end - start;
+var ellipsisClamps = document.querySelectorAll('.ellipsis-clamp');
+document.querySelector('h2').innerHTML = `took ${elapsed} ms to clamp ${ellipsisClamps.length} paragraphs`;
+</script>
+</body>
+</html>
