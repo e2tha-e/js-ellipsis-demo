@@ -26,7 +26,7 @@ function lengthToNumber(length) {
         return null;
     }
     if (checkForConsistentLengthUnits(length)) {
-        var number = parseFloat(length.replace(/([\d\.]*)/, '$1'));
+        var number = parseFloat(length);
         return number;
     } else {
         leftAlignFail = true;
