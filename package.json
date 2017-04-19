@@ -1,0 +1,23 @@
+{
+  "name": "js-ellipsis-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "generate.js",
+  "dependencies": {
+    "lorem-ipsum": "^1.0.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/e2tha-e/js-ellipsis-demo.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/e2tha-e/js-ellipsis-demo/issues"
+  },
+  "homepage": "https://github.com/e2tha-e/js-ellipsis-demo#readme"
+}
